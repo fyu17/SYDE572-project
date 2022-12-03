@@ -617,6 +617,8 @@ if __name__ == '__main__':
             logger.info("in comm round:" + str(round))
             party_list_this_round = party_list_rounds[round]
             global_w = global_model.state_dict()
+            if args.server_momentum:
+                old_w = copy.deepcopy(global_model.state_dict())
             nets_this_round = {k: nets[k] for k in party_list_this_round}
             for net in nets_this_round.values():
                 net.load_state_dict(global_w)
@@ -637,6 +639,13 @@ if __name__ == '__main__':
                 else:
                     for key in net_para:
                         global_w[key] += net_para[key] * fed_avg_freqs[net_id]
+
+            if args.server_momentum:
+                delta_w = copy.deepcopy(global_w)
+                for key in delta_w:
+                    delta_w[key] = old_w[key] - global_w[key]
+                    moment_v[key] = args.server_momentum * moment_v[key] + (1-args.server_momentum) * delta_w[key]
+                    global_w[key] = old_w[key] - moment_v[key]
             global_model.load_state_dict(global_w)
 
 
